@@ -15,7 +15,7 @@ import com.example.design_system.components.shimmer.ForoomShimmerDrawableBuilder
 import com.alternator.foroom.databinding.FragmentForoomRegistrationBinding
 import com.example.foroom.presentation.ui.screens.home.container.ForoomHomeContainerFragment
 import com.example.foroom.presentation.ui.util.validator.BlankInputValidation
-import com.example.navigation.host.openNextPage
+import com.example.navigation.host.openRootPage
 import com.example.navigation.util.navigationHost
 import com.example.network.ifHttpError
 import com.example.network.model.response.AuthenticationError
@@ -107,10 +107,13 @@ class ForoomRegistrationFragment :
             }
         }
 
-        viewModel.registrationLiveData.handleResult(viewLifecycleOwner) {
+        viewModel.getAndSaveUserResultLiveData.handleResult(viewLifecycleOwner) {
             onSuccess {
-                navigationHost?.openNextPage(ForoomHomeContainerFragment())
+                navigationHost?.openRootPage(ForoomHomeContainerFragment())
             }
+        }
+
+        viewModel.registrationLiveData.handleResult(viewLifecycleOwner) {
 
             onResult { result ->
                 globalLoadingDelegate?.isLoading(result.isLoading)

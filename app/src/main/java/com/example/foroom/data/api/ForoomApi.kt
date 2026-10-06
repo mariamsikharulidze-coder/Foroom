@@ -44,6 +44,7 @@ interface ForoomApi {
         @Query("chatId") chatId: Int,
         @Query("page") page: Int,
         @Query("limit") limit: Int,
+        @Query("beforeId") beforeId: Int? = null,
     ): MessageHistoryResponseEntity
 
     @POST("api/chats")

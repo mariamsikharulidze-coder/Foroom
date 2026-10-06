@@ -14,6 +14,7 @@ import com.example.foroom.presentation.ui.screens.home.container.ForoomHomeConta
 import com.example.foroom.presentation.ui.screens.registration.ForoomRegistrationFragment
 import com.example.foroom.presentation.ui.util.validator.BlankInputValidation
 import com.example.navigation.host.openNextPage
+import com.example.navigation.host.openRootPage
 import com.example.navigation.util.navigationHost
 import com.example.network.ifHttpError
 import com.example.network.model.response.AuthenticationError
@@ -87,7 +88,7 @@ class ForoomLoginFragment : BaseFragment<ForoomLoginViewModel, FragmentForoomLog
 
         viewModel.getAndSaveUserResultLiveData.handleResult(viewLifecycleOwner) {
             onSuccess {
-                navigationHost?.openNextPage(ForoomHomeContainerFragment(), popBackStack = true)
+                navigationHost?.openRootPage(ForoomHomeContainerFragment())
             }
         }
     }

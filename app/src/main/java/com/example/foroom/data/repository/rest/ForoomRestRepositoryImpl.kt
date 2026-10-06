@@ -69,10 +69,11 @@ class ForoomRestRepositoryImpl(
         currentUserId: String,
         chatId: Int,
         page: Int,
-        limit: Int
+        limit: Int,
+        beforeId: Int?
     ): MessageHistoryResponse {
         return mapper.mapToMessageHistoryResponse(
-            dataSource.getMessageHistory(chatId, page, limit),
+            dataSource.getMessageHistory(chatId, page, limit, beforeId),
             currentUserId
         )
     }

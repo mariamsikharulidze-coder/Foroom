@@ -15,7 +15,6 @@ import com.example.network.rest_client.networkExecutor
 import com.example.shared.model.Image
 import com.example.shared.model.Result
 import com.example.shared.ui.viewModel.BaseViewModel
-import kotlinx.coroutines.launch
 
 class ForoomRegistrationViewModel(
     private val getAvatarsUseCase: GetAvatarsUseCase,
@@ -66,20 +65,18 @@ class ForoomRegistrationViewModel(
 
         networkExecutor<UserTokenResponse> {
             execute {
-                registerUserUseCase(RegistrationRequest(userName, password, avatarId))
+                val response = registerUserUseCase(RegistrationRequest(userName, password, avatarId))
+                userTokenRuntimeHolder.setUserToken(response.token)
+                userDataStore.saveUserAuthToken(response.token)
+                response
             }
 
             onResult { result ->
                 _registrationLiveData.postValue(result)
             }
 
-            success { response ->
-                userTokenRuntimeHolder.setUserToken(response.token)
+            success {
                 getAndSaveUserData()
-
-                viewModelScope.launch {
-                    userDataStore.saveUserAuthToken(response.token)
-                }
             }
         }
     }

@@ -4,7 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.foroom.domain.model.User
-import com.example.foroom.presentation.ui.delegate.saveuser.GetAndSaveUserDelegate
+import com.example.foroom.domain.usecase.GetCurrentUserUseCase
 import com.example.foroom.presentation.ui.util.datastore.user.ForoomUserDataStore
 import com.example.foroom.presentation.ui.util.exception.ForoomUnauthorizedUserException
 import com.example.shared.util.runtime.user_token.UserTokenRuntimeHolder
@@ -12,30 +12,26 @@ import com.example.shared.model.ForoomLanguage
 import com.example.shared.model.Result
 import com.example.shared.ui.viewModel.BaseViewModel
 import com.example.shared.util.runtime.user_language.UserLanguageRuntimeHolder
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.core.component.get
 
 class ForoomActivityViewModel(
     private val userDataStore: ForoomUserDataStore,
     private val userTokenRuntimeHolder: UserTokenRuntimeHolder,
-    getAndSaveUserDelegate: GetAndSaveUserDelegate
-): BaseViewModel(), GetAndSaveUserDelegate by getAndSaveUserDelegate{
+    private val getCurrentUserUseCase: GetCurrentUserUseCase
+): BaseViewModel() {
     private val _currentUserLiveData = MediatorLiveData<Result<User>>()
     val currentUserLiveData: LiveData<Result<User>> get() = _currentUserLiveData
 
     private val userLanguageRuntimeHolder = get<UserLanguageRuntimeHolder>()
 
+    private var sessionJob: Job? = null
+
     init {
-        getAndSaveUserDelegate.init(viewModelScope)
-
         updateRuntimeLanguageHolder()
-        getCurrentUser()
-
-        _currentUserLiveData.addSource(getAndSaveUserResultLiveData) { result ->
-            _currentUserLiveData.value = result
-        }
     }
 
     private fun updateRuntimeLanguageHolder() {
@@ -48,14 +44,20 @@ class ForoomActivityViewModel(
         }
     }
 
-    private fun getCurrentUser() {
-        viewModelScope.launch {
-            userDataStore.getUserAuthToken().catch {
-                _currentUserLiveData.postValue(Result.Error(ForoomUnauthorizedUserException()))
-            }.collect { token ->
+    fun refreshSession() {
+        sessionJob?.cancel()
+        _currentUserLiveData.value = Result.Loading
+        sessionJob = viewModelScope.launch {
+            try {
+                val token = userDataStore.getUserAuthToken().first()
                 userTokenRuntimeHolder.setUserToken(token)
-                getAndSaveUserData()
-                cancel()
+                if (token.isBlank()) throw ForoomUnauthorizedUserException()
+                val user = getCurrentUserUseCase()
+                userDataStore.saveUser(user)
+                _currentUserLiveData.value = Result.Success(user)
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                _currentUserLiveData.value = Result.Error(error)
             }
         }
     }

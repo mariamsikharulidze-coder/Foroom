@@ -33,14 +33,26 @@ class ForoomHomeContainerFragment :
         get() = FragmentForoomContainerHomeBinding::inflate
     override val viewModel: ForoomHomeContainerViewModel by viewModel()
 
-    private val chatsFragment = ForoomHomeChatsFragment()
-    private val profileFragment = ForoomProfileFragment()
+    private val chatsFragment: ForoomHomeChatsFragment
+        get() = childFragmentManager.findFragmentByTag(CHATS_TAG) as? ForoomHomeChatsFragment
+            ?: ForoomHomeChatsFragment()
+    private val profileFragment: ForoomProfileFragment
+        get() = childFragmentManager.findFragmentByTag(PROFILE_TAG) as? ForoomProfileFragment
+            ?: ForoomProfileFragment()
+    private var selectedPage = PAGE_INDEX_CHATS
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        selectedPage = savedInstanceState?.getInt(SELECTED_PAGE_KEY)
+            ?: navArgs?.index ?: PAGE_INDEX_CHATS
         setUpNavigation()
         setObservers()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(SELECTED_PAGE_KEY, selectedPage)
     }
 
     private fun setUpNavigation() = with(binding.navBar) {
@@ -48,7 +60,8 @@ class ForoomHomeContainerFragment :
 
             when (button.id) {
                 R.id.homeNavigationChats -> {
-                    addOrShowPage(chatsFragment)
+                    selectedPage = PAGE_INDEX_CHATS
+                    addOrShowPage(chatsFragment, CHATS_TAG)
                 }
 
                 R.id.homeNavigationCreateChat -> {
@@ -56,13 +69,14 @@ class ForoomHomeContainerFragment :
                 }
 
                 R.id.homeNavigationProfile -> {
-                    addOrShowPage(profileFragment)
+                    selectedPage = PAGE_INDEX_PROFILE
+                    addOrShowPage(profileFragment, PROFILE_TAG)
                 }
             }
 
         }
 
-        selectAt(navArgs?.index ?: PAGE_INDEX_CHATS)
+        selectAt(selectedPage)
     }
 
     private fun setObservers() {
@@ -79,23 +93,27 @@ class ForoomHomeContainerFragment :
         }
     }
 
-    private fun addOrShowPage(fragment: BaseFragment<*, *>) {
+    private fun addOrShowPage(fragment: BaseFragment<*, *>, tag: String) {
         val transaction = childFragmentManager.beginTransaction()
 
+        childFragmentManager.fragments.forEach(transaction::hide)
         if (fragment.isAdded) {
-            childFragmentManager.fragments.forEach(transaction::hide)
             transaction.show(fragment)
         } else {
             transaction.add(
                 R.id.homeContainer,
-                fragment
+                fragment,
+                tag
             )
         }
 
-        transaction.commit()
+        transaction.commitNow()
     }
 
     companion object {
+        private const val CHATS_TAG = "homeChats"
+        private const val PROFILE_TAG = "homeProfile"
+        private const val SELECTED_PAGE_KEY = "selectedPage"
         const val PAGE_INDEX_CHATS = 0
         const val PAGE_INDEX_PROFILE = 2
     }

@@ -6,7 +6,6 @@ import com.example.foroom.domain.model.User
 import com.example.foroom.domain.usecase.GetCurrentUserUseCase
 import com.example.foroom.presentation.ui.util.datastore.user.ForoomUserDataStore
 import com.example.network.rest_client.parentNetworkExecutor
-import kotlinx.coroutines.launch
 import com.example.shared.model.Result
 import com.example.shared.ui.delegate.BaseForoomDelegate
 
@@ -19,12 +18,10 @@ class GetAndSaveUserDelegateImpl(
 
     override fun getAndSaveUserData() {
         parentNetworkExecutor {
-            execute { getCurrentUserUseCase() }
-
-            success { user ->
-                parentScope.launch {
-                    userDataStore.saveUser(user)
-                }
+            execute {
+                val user = getCurrentUserUseCase()
+                userDataStore.saveUser(user)
+                user
             }
 
             onResult { result ->

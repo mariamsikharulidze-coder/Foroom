@@ -9,12 +9,17 @@ import com.example.foroom.domain.usecase.GetMessageHistoryUseCase
 import com.example.foroom.domain.usecase.MessageWebSocketUseCase
 import com.example.foroom.presentation.ui.model.MessageUI
 import com.example.foroom.presentation.ui.util.datastore.user.ForoomUserDataStore
+import com.example.network.BuildConfig
 import com.example.network.rest_client.networkExecutor
 import com.example.shared.extension.isSuccess
-import com.example.shared.extension.orEmpty
 import com.example.shared.model.Result
 import com.example.shared.ui.viewModel.BaseViewModel
 import com.example.shared.util.pagination.PaginationHelper
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 
 class ForoomChatViewModel(
@@ -25,7 +30,11 @@ class ForoomChatViewModel(
     private val paginationHelper: PaginationHelper<Message>
 ) : BaseViewModel() {
 
-    private lateinit var userId: String
+    private var userId: String? = null
+    private var connectionJob: Job? = null
+    private var messagesJob: Job? = null
+    private var historyJob: Job? = null
+    private var historyLoading = false
 
     private val _messagesLiveData = MutableLiveData<List<MessageUI>>()
     val messagesLiveData: LiveData<List<MessageUI>> get() = _messagesLiveData
@@ -37,66 +46,72 @@ class ForoomChatViewModel(
     var hasMoreMessages = false
 
     fun connect() {
-        viewModelScope.launch {
+        disConnect()
+        paginationHelper.clear()
+        newMessages.clear()
+        hasMoreMessages = true
+        historyLoading = false
+        _messagesLiveData.value = emptyList()
+        _connectionLiveData.value = Result.Loading
+        connectionJob = viewModelScope.launch {
+            userId = userDataStore.getUser().first().id
             messagesUseCase.connect().collect { result ->
                 if (result.isSuccess) {
-                    getUserId()
-                    joinGroup().collect { joinResult ->
-                        _connectionLiveData.postValue(joinResult)
+                    messagesJob = launch(start = CoroutineStart.UNDISPATCHED) {
+                        messagesUseCase.onMessageReceived(requireNotNull(userId)).collect { message ->
+                            newMessages.add(message)
+                            combineMessages()
+                        }
                     }
-                } else {
-                    _connectionLiveData.postValue(result)
-                }
+                    messagesUseCase.joinGroup(chatId.toString()).collect { joined ->
+                        _connectionLiveData.value = joined
+                        if (joined.isSuccess) getMessageHistory()
+                    }
+                } else _connectionLiveData.value = result
             }
-            messagesUseCase.joinGroup(chatId.toString())
         }
     }
 
-    fun disConnect() = messagesUseCase.disconnect()
+    fun disConnect() {
+        connectionJob?.cancel()
+        messagesJob?.cancel()
+        historyJob?.cancel()
+        messagesUseCase.disconnect()
+        userId = null
+        historyLoading = false
+    }
 
-    fun sendMessage(text: String) = messagesUseCase.sendMessage(userId = userId, chatId, text)
-
-    fun joinGroup() = messagesUseCase.joinGroup(chatId.toString())
-
-    fun leaveGroup() = messagesUseCase.leaveGroup(chatId.toString())
+    fun sendMessage(text: String): Flow<Result<Unit>> {
+        val id = userId
+        if (id == null || _connectionLiveData.value?.isSuccess != true) {
+            return flowOf(Result.Error(IllegalStateException("Chat is not ready")))
+        }
+        if (text.isBlank()) return flowOf(Result.Error(IllegalArgumentException("Message cannot be blank")))
+        return messagesUseCase.sendMessage(id, chatId, text)
+    }
 
     fun getMessageHistory() {
-        networkExecutor<MessageHistoryResponse> {
-            execute {
-                getMessageHistoryUseCase(
-                    userId.orEmpty(),
-                    chatId,
-                    paginationHelper.getPage()
-                )
+        val id = userId ?: return
+        if (historyLoading || !hasMoreMessages) return
+        historyLoading = true
+        val page = paginationHelper.getPage()
+        val beforeId = if (BuildConfig.TRAINING_MODE) paginationHelper.getItems().lastOrNull()?.id else null
+        historyJob = networkExecutor<MessageHistoryResponse> {
+            execute { getMessageHistoryUseCase(id, chatId, page, beforeId = beforeId) }
+            onResult { result ->
+                if (result is Result.Error) viewModelScope.launch { historyLoading = false }
             }
-
             success { response ->
                 paginationHelper.addPage(response.messages)
                 hasMoreMessages = response.hasNext
+                historyLoading = false
                 combineMessages()
             }
         }
     }
 
-    private suspend fun onMessage() {
-        messagesUseCase.onMessageReceived(userId).collect { message ->
-            newMessages.add(FIRST_INDEX, message)
-            combineMessages()
-        }
-    }
-
-    private fun getUserId() {
-        viewModelScope.launch {
-            userDataStore.getUser().collect { user ->
-                userId = user.id
-                getMessageHistory()
-                onMessage()
-            }
-        }
-    }
-
     private fun combineMessages() {
-        val combined = newMessages + paginationHelper.getItems()
+        val combined = (newMessages + paginationHelper.getItems()).distinctBy { it.id }.sortedByDescending { it.id }
 
         _messagesLiveData.postValue(mapToMessageUI(combined))
     }
@@ -118,9 +133,5 @@ class ForoomChatViewModel(
                 )
             }
         }
-    }
-
-    companion object {
-        private const val FIRST_INDEX = 0
     }
 }

@@ -1,6 +1,6 @@
 # Foroom Training
 
-The default debug build works locally without an internet connection. Accounts and sessions are stored only on the device. This mode supports login, registration, avatars and sign-out; the home screen has an empty chat list. Chat operations and profile changes are unavailable.
+The default debug build works locally without an internet connection. Accounts, sessions, chats and messages are stored only on the device. This mode supports login, registration, avatars, password changes, language changes, chat creation, chat search, persistent messages and sign-out. Chat favorites/deletion and other profile changes are unavailable.
 
 ## Run
 
@@ -21,4 +21,8 @@ For a debug build connected to the original server, run:
 ./gradlew :app:assembleDebug -PforoomTraining=false
 ```
 
-Release builds always use the original server. Local accounts are not shared with that server.
+Release builds always use the original server. Local accounts, chats and messages are not shared with that server.
+
+For Appium Inspector, the debug training package is `com.alternator.foroom.training`; the activity is `com.example.foroom.presentation.ui.activity.ForoomActivity`.
+
+Conversations are shared by local accounts on the same device. Sign out and switch accounts to continue a conversation as another user. Data is not synchronized between devices.

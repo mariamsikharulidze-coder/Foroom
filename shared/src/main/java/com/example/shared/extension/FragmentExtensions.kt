@@ -9,12 +9,14 @@ fun Fragment.setSoftInputModeResize() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
         activity?.window?.setDecorFitsSystemWindows(false)
 
-        view?.setOnApplyWindowInsetsListener { _, windowInsets  ->
+        view?.setOnApplyWindowInsetsListener { content, windowInsets ->
+            val bars = windowInsets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
             val imeHeight = windowInsets.getInsets(WindowInsets.Type.ime()).bottom
-            view?.setPadding(0, 0, 0, imeHeight)
+            content.setPadding(bars.left, bars.top, bars.right, maxOf(bars.bottom, imeHeight))
 
             windowInsets
         }
+        view?.requestApplyInsets()
     } else {
         @Suppress("DEPRECATION")
         activity?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)

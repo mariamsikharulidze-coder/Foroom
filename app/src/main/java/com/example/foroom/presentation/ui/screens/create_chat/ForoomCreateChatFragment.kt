@@ -10,7 +10,6 @@ import com.alternator.foroom.databinding.FragmentForoomCreateChatBinding
 import com.example.foroom.presentation.ui.screens.chat.ForoomChatFragment
 import com.example.foroom.presentation.ui.screens.home.chats.events.ForoomHomeChatsEvents
 import com.example.navigation.host.openNextPage
-import com.example.navigation.host.popBackStack
 import com.example.navigation.util.navigationHost
 import com.example.shared.extension.handleResult
 import com.example.shared.extension.onClick
@@ -63,8 +62,10 @@ class ForoomCreateChatFragment :
             onSuccess { chat ->
                 globalLoadingDelegate?.hideGlobalLoading()
                 eventsHub?.sendEvent(ForoomHomeChatsEvents.RefreshChats)
-                navigationHost?.popBackStack()
-                navigationHost?.openNextPage(ForoomChatFragment(), args = chat, addToBackStack = true, animate = false)
+                navigationHost?.let { host ->
+                    host.getHostFragmentManager().popBackStackImmediate()
+                    host.openNextPage(ForoomChatFragment(), args = chat, addToBackStack = true, animate = false)
+                }
             }
         }
     }

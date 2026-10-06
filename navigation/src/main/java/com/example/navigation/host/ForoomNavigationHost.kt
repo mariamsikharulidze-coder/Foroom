@@ -45,6 +45,11 @@ fun ForoomNavigationHost.openNextPage(
     transaction.commit()
 }
 
+fun ForoomNavigationHost.openRootPage(fragment: BaseFragment<*, *>) {
+    getHostFragmentManager().popBackStackImmediate(null, FragmentManager.POP_BACK_STACK_INCLUSIVE)
+    openNextPage(fragment, addToBackStack = false, animate = false)
+}
+
 fun <T : Parcelable> ForoomNavigationHost.openNextPage(
     fragment: BaseFragment<*, *>,
     args: T,

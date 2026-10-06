@@ -15,7 +15,7 @@ import com.example.foroom.presentation.ui.screens.home.profile.bottom_sheets.cha
 import com.example.foroom.presentation.ui.screens.home.profile.bottom_sheets.change_username.ForoomChangeUsernameBottomSheet
 import com.example.foroom.presentation.ui.screens.home.profile.events.ProfileScreenEvents
 import com.example.foroom.presentation.ui.screens.log_in.ForoomLoginFragment
-import com.example.navigation.host.openNextPage
+import com.example.navigation.host.openRootPage
 import com.example.navigation.util.navigationHost
 import com.example.shared.extension.handleResult
 import com.example.shared.extension.loadImageUrl
@@ -90,11 +90,7 @@ class ForoomProfileFragment : BaseFragment<ForoomProfileViewModel, FragmentForoo
 
         viewModel.signOutLiveData.handleResult(viewLifecycleOwner) {
             onSuccess {
-                navigationHost?.openNextPage(
-                    ForoomLoginFragment(),
-                    popBackStack = true,
-                    animate = false
-                )
+                navigationHost?.openRootPage(ForoomLoginFragment())
             }
         }
 

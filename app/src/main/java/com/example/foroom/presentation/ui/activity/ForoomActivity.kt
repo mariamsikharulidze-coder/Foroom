@@ -16,6 +16,7 @@ import com.example.foroom.presentation.ui.util.datastore.user.ForoomUserDataStor
 import com.example.navigation.host.ForoomNavigationHost
 import com.example.navigation.host.hasBackStack
 import com.example.navigation.host.openNextPage
+import com.example.navigation.host.openRootPage
 import com.example.navigation.host.popBackStack
 import com.example.shared.extension.INVALID_VALUE
 import com.example.shared.extension.handleResult
@@ -70,6 +71,7 @@ class ForoomActivity : ForoomNavigationHost, GlobalLoadingDelegate, ForoomEvents
 
         // prevent background clicks
         binding.loadingViewBackground.setOnClickListener {}
+        viewModel.refreshSession()
         setObservers()
     }
 
@@ -111,12 +113,19 @@ class ForoomActivity : ForoomNavigationHost, GlobalLoadingDelegate, ForoomEvents
 
             onSuccess {
                 if (languageChangeRecreatePoint != null) restoreSavedPoint()
-                else openNextPage(ForoomHomeContainerFragment(), false, animate = false)
+                else if (supportFragmentManager.findFragmentById(fragmentContainerId) == null) {
+                    openRootPage(ForoomHomeContainerFragment())
+                }
             }
 
             onError {
-                if (languageChangeRecreatePoint != null) restoreSavedPoint()
-                else openNextPage(ForoomLoginFragment(), false, animate = false)
+                if (languageChangeRecreatePoint == LanguageChangePoint.REGISTRATION ||
+                    languageChangeRecreatePoint == LanguageChangePoint.LOG_IN) {
+                    restoreSavedPoint()
+                } else {
+                    languageChangeRecreatePoint = null
+                    openRootPage(ForoomLoginFragment())
+                }
             }
 
             onResult { result ->
@@ -132,6 +141,7 @@ class ForoomActivity : ForoomNavigationHost, GlobalLoadingDelegate, ForoomEvents
             LanguageChangePoint.POFILE -> ForoomHomeContainerFragment()
         }
 
+        languageChangeRecreatePoint = null
         val previousScreensAvailable = hasBackStack()
         popBackStack()
         openNextPage(

@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.core.view.updatePadding
 import androidx.lifecycle.lifecycleScope
 import com.alternator.foroom.R
@@ -15,10 +16,12 @@ import com.example.navigation.guest.ForoomNavigationArgumentsHolder
 import com.example.navigation.guest.requireNavArgs
 import com.example.navigation.util.navigationHost
 import com.example.shared.extension.isError
+import com.example.shared.extension.isSuccess
 import com.example.shared.extension.onClick
 import com.example.shared.extension.onGlobalLayout
 import com.example.shared.extension.resetSoftInputMode
 import com.example.shared.extension.setSoftInputModeResize
+import com.example.shared.model.Result
 import com.example.shared.ui.fragment.BaseFragment
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -50,10 +53,6 @@ class ForoomChatFragment : BaseFragment<ForoomChatViewModel, FragmentForoomChatB
         super.onStart()
 
         viewModel.connect()
-        observeConnection()
-        lifecycleScope.launch {
-            collectMessages()
-        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -61,12 +60,13 @@ class ForoomChatFragment : BaseFragment<ForoomChatViewModel, FragmentForoomChatB
 
         initViews()
         setListeners()
+        observeConnection()
+        collectMessages()
     }
 
     override fun onStop() {
         super.onStop()
 
-        viewModel.leaveGroup()
         viewModel.disConnect()
     }
 
@@ -78,6 +78,7 @@ class ForoomChatFragment : BaseFragment<ForoomChatViewModel, FragmentForoomChatB
 
     private fun observeConnection() {
         viewModel.connectionLiveData.observe(viewLifecycleOwner) { result ->
+            binding.sendMessageButton.isEnabled = result.isSuccess
             if (result.isError) {
                 ForoomMessageDialog.showMessage(
                     requireContext(),
@@ -115,11 +116,30 @@ class ForoomChatFragment : BaseFragment<ForoomChatViewModel, FragmentForoomChatB
     }
 
     private fun setListeners() {
-        binding.sendMessageButton.onClick {
-            lifecycleScope.launch {
-                viewModel.sendMessage(binding.messageInput.text).collect {
-                    binding.messageInput.editText.text?.clear()
-                    binding.messagesRecyclerView.smoothScrollToPosition(0)
+        binding.sendMessageButton.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val text = binding.messageInput.text
+                binding.sendMessageButton.isEnabled = false
+                try {
+                    viewModel.sendMessage(text).collect { result ->
+                        when (result) {
+                            is Result.Success -> {
+                                if (binding.messageInput.text == text) {
+                                    binding.messageInput.editText.text?.clear()
+                                }
+                                binding.messagesRecyclerView.smoothScrollToPosition(0)
+                            }
+                            is Result.Error -> Toast.makeText(
+                                requireContext(), result.exception.message, Toast.LENGTH_SHORT
+                            ).show()
+                            else -> Unit
+                        }
+                    }
+                } finally {
+                    if (view != null) {
+                        binding.sendMessageButton.isEnabled =
+                            viewModel.connectionLiveData.value?.isSuccess == true
+                    }
                 }
             }
         }

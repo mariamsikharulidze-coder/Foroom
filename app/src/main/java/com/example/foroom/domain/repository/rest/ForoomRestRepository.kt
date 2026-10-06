@@ -33,7 +33,8 @@ interface ForoomRestRepository {
         currentUserId: String,
         chatId: Int,
         page: Int,
-        limit: Int
+        limit: Int,
+        beforeId: Int? = null
     ): MessageHistoryResponse
 
     suspend fun createChat(name: String, emojiId: Int): Chat

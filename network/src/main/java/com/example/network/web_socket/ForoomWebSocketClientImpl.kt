@@ -5,7 +5,6 @@ import com.example.shared.model.Result
 import com.microsoft.signalr.HubConnection
 import com.microsoft.signalr.HubConnectionBuilder
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 
@@ -18,9 +17,6 @@ class ForoomWebSocketClientImpl(private val hub: ForoomHub) : ForoomWebSocketCli
         }
 
     override fun connect(): Flow<Result<Unit>> {
-        if (BuildConfig.TRAINING_MODE) {
-            return flowOf(Result.Error(UnsupportedOperationException("Chat is unavailable in training mode")))
-        }
         _connection = HubConnectionBuilder.create(BuildConfig.BASE_URL + hub.path).build()
 
         return callbackFlow {

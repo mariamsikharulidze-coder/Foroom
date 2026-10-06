@@ -51,8 +51,8 @@ class ForoomRestDataSourceImpl(
         return foroomApi.getChats(page, limit, name, popular, created, favorite)
     }
 
-    override suspend fun getMessageHistory(chatId: Int, page: Int, limit: Int): MessageHistoryResponseEntity {
-        return foroomApi.getMessageHistory(chatId, page, limit)
+    override suspend fun getMessageHistory(chatId: Int, page: Int, limit: Int, beforeId: Int?): MessageHistoryResponseEntity {
+        return foroomApi.getMessageHistory(chatId, page, limit, beforeId)
     }
 
     override suspend fun createChat(name: String, emojiId: Int): ChatEntity {

@@ -8,6 +8,7 @@ import com.example.foroom.domain.model.User
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 
 class ForoomUserDataStoreImpl(private val context: Context) : ForoomUserDataStore {
 
@@ -27,14 +28,11 @@ class ForoomUserDataStoreImpl(private val context: Context) : ForoomUserDataStor
         }
     }
 
-    override suspend fun getUser(): Flow<User> = context.dataStore.data.map { data ->
-        // Use Flow.catch to handle absent values
-
-        User(
-            id = data[userIdKey]!!,
-            userName = data[userNameKey]!!,
-            avatarUrl = data[avatarUrlKey]!!
-        )
+    override suspend fun getUser(): Flow<User> = context.dataStore.data.mapNotNull { data ->
+        val id = data[userIdKey] ?: return@mapNotNull null
+        val name = data[userNameKey] ?: return@mapNotNull null
+        val avatar = data[avatarUrlKey] ?: return@mapNotNull null
+        User(id, name, avatar)
     }
 
     override suspend fun saveUserAuthToken(token: String) {
@@ -44,9 +42,7 @@ class ForoomUserDataStoreImpl(private val context: Context) : ForoomUserDataStor
     }
 
     override suspend fun getUserAuthToken(): Flow<String> = context.dataStore.data.map { data ->
-        // Use Flow.catch to handle absent values
-
-        data[userTokenKey]!!
+        data[userTokenKey].orEmpty()
     }
 
     override suspend fun saveUserLanguage(language: String) {
@@ -63,7 +59,10 @@ class ForoomUserDataStoreImpl(private val context: Context) : ForoomUserDataStor
 
     override suspend fun clearUserData() {
         context.dataStore.edit { prefs ->
-            prefs.clear()
+            prefs.remove(userNameKey)
+            prefs.remove(avatarUrlKey)
+            prefs.remove(userIdKey)
+            prefs.remove(userTokenKey)
         }
     }
 

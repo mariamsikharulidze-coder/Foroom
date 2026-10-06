@@ -9,9 +9,10 @@ class GetMessageHistoryUseCase(private val repository: ForoomRestRepository) {
         currentUserId: String,
         chatId: Int,
         page: Int,
-        limit: Int = DEFAULT_LIMIT
+        limit: Int = DEFAULT_LIMIT,
+        beforeId: Int? = null
     ): MessageHistoryResponse {
-        return repository.getMessageHistory(currentUserId, chatId, page, limit)
+        return repository.getMessageHistory(currentUserId, chatId, page, limit, beforeId)
     }
 
     companion object {

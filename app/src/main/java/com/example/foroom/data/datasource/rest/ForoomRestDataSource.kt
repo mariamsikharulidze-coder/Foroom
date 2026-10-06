@@ -32,7 +32,8 @@ interface ForoomRestDataSource {
     suspend fun getMessageHistory(
         chatId: Int,
         page: Int,
-        limit: Int
+        limit: Int,
+        beforeId: Int? = null
     ): MessageHistoryResponseEntity
 
     suspend fun createChat(name: String, emojiId: Int): ChatEntity

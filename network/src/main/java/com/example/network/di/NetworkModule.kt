@@ -7,6 +7,8 @@ import com.example.network.web_socket.ForoomWebSocketClient
 import com.example.network.web_socket.ForoomWebSocketClientImpl
 import com.example.shared.util.runtime.user_language.UserLanguageRuntimeHolder
 import com.example.network.training.TrainingInterceptor
+import com.example.network.training.TrainingChatClient
+import com.example.network.training.TrainingStore
 import org.koin.android.ext.koin.androidContext
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -16,6 +18,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 val networkModule = module {
+    single { TrainingStore(androidContext()) }
     single<Retrofit> {
         val newClientBuilder = OkHttpClient.Builder()
 
@@ -33,7 +36,7 @@ val networkModule = module {
             chain.proceed(newRequest)
         }
         if (BuildConfig.TRAINING_MODE) {
-            newClientBuilder.addInterceptor(TrainingInterceptor(androidContext()))
+            newClientBuilder.addInterceptor(TrainingInterceptor(get<TrainingStore>()))
         }
         newClientBuilder.addInterceptor(HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -47,6 +50,7 @@ val networkModule = module {
     }
 
     factory<ForoomWebSocketClient>(named(ForoomWebSocketClientImpl.ForoomHub.CHAT)) {
-        ForoomWebSocketClientImpl(ForoomWebSocketClientImpl.ForoomHub.CHAT)
+        if (BuildConfig.TRAINING_MODE) TrainingChatClient(get(), get())
+        else ForoomWebSocketClientImpl(ForoomWebSocketClientImpl.ForoomHub.CHAT)
     }
 }

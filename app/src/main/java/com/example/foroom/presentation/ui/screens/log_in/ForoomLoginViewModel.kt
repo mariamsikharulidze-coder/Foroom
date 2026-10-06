@@ -12,7 +12,6 @@ import com.example.network.model.response.UserTokenResponse
 import com.example.network.rest_client.networkExecutor
 import com.example.shared.model.Result
 import com.example.shared.ui.viewModel.BaseViewModel
-import kotlinx.coroutines.launch
 
 class ForoomLoginViewModel(
     private val logInUserUseCase: LogInUserUseCase,
@@ -33,20 +32,18 @@ class ForoomLoginViewModel(
     fun logIn() {
         networkExecutor<UserTokenResponse> {
             execute {
-                logInUserUseCase(LogInRequest(userName, password))
+                val response = logInUserUseCase(LogInRequest(userName, password))
+                userTokenRuntimeHolder.setUserToken(response.token)
+                userDataStore.saveUserAuthToken(response.token)
+                response
             }
 
             onResult { result ->
                 _logInLiveData.postValue(result)
             }
 
-            success { response ->
-                userTokenRuntimeHolder.setUserToken(response.token)
+            success {
                 getAndSaveUserData()
-
-                viewModelScope.launch {
-                    userDataStore.saveUserAuthToken(response.token)
-                }
             }
         }
     }

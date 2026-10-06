@@ -41,7 +41,7 @@ val presentationModule get() = module {
     }
 
     factory<SignOutDelegate> {
-        SignOutDelegateImpl(get(), get())
+        SignOutDelegateImpl(get(), get(), get())
     }
 
     // activity
